@@ -9,9 +9,9 @@ QString player2str(SurakartaPlayer pl)
 {
     QString player;
     if(pl == PieceColor::BLACK)
-        player = "Black";
+        player = "BLACK";
     else
-        player = "White";
+        player = "WHITE";
     return player;
 }
 
@@ -46,24 +46,22 @@ MainWindow::MainWindow(unsigned int boardsize, unsigned int countdown, QString p
     , port(pt), username(u), room(r)
 {
     ui->setupUi(this);
-    ui->move->setEnabled(false);
-    ui->resigne->setEnabled(false);
-    ui->ai->setEnabled(false);
+    //ui->move->setEnabled(false);
+    //ui->resigne->setEnabled(false);
+    //ui->ai->setEnabled(false);
+    //ui->prompt->setEnabled(false);
     game = new SurakartaGame(ui->centralwidget, boardsize, p);
     game->board_->setGeometry(0, 0, SIZE + 10, SIZE + 10);
-    //game->SetPlayer(p);
-    //game->StartGame();
+    game->StartGame();
     game->game_info_->max_no_capture_round_ = round;
-    //agent = new SurakartaAgent(game->GetBoard(), game->GetGameInfo(), game->GetRuleManager());
+    agent = new SurakartaAgent(game->GetBoard(), game->GetGameInfo(), game->GetRuleManager());
     ui->label->setText("Current_Player : " + player2str(game->game_info_->current_player_));
     connect(timer, &QTimer::timeout, this, &MainWindow::updateCountdown);
     ui->label_2->setText("CountDown : " + QString::number(restTime) + "s");
     connect(socket->base(), &QTcpSocket::connected, this, &MainWindow::connected_successfully);
     connect(socket, &NetworkSocket::receive, this, &MainWindow::receiveMessage);
-    file.setFileName("C:\\Surakarta\\Testing\\game.txt");
-    bool a = file.open(QIODevice::WriteOnly);
-    if(a)
-        std::cout<<"FILEOPEN"<<std::endl;
+    file.setFileName("D:\\Surakarta\\QT\\game.txt");
+    file.open(QIODevice::ReadWrite);
 }
 
 void MainWindow::Move(SurakartaMove move)
@@ -77,26 +75,28 @@ void MainWindow::Move(SurakartaMove move)
 
 void MainWindow::on_move_clicked()
 {
-    /*auto move = agent->CalculateMove();
+    auto move = agent->CalculateMove();
     NetworkData data = NetworkData(OPCODE::MOVE_OP, QString(char('A'+move.from.x)) + QString::number(move.from.y),
                                    QString(char('A'+move.to.x)) + QString::number(move.to.y), "");
-    std::cout<<(data.data1 + "->" + data.data2 + " ").toStdString()<<std::endl;
-    file.write((data.data1 + "->" + data.data2 + " ").toUtf8());
+    //std::cout<<(data.data1 + "-" + data.data2 + " ").toStdString()<<std::endl;
+    file.write((data.data1 + "-" + data.data2 + " ").toUtf8());
     file.flush();
     sendMessage(data.op, data.data1, data.data2, "");
     Move(move);
     if(game->game_info_->IsEnd()){
+        file.write(QString("\n").toUtf8());
         endGame(data.data1, data.data2, data.data3);
-    }*/
-    SurakartaMove move = SurakartaMove(SurakartaBoard::from, SurakartaBoard::to, game->game_info_->current_player_);
+    }
+    /*SurakartaMove move = SurakartaMove(SurakartaBoard::from, SurakartaBoard::to, game->game_info_->current_player_);
     NetworkData data = NetworkData(OPCODE::MOVE_OP, QString(char('A'+move.from.x)) + QString::number(move.from.y),
                                        QString(char('A'+move.to.x)) + QString::number(move.to.y), "");
-    file.write((data.data1 + "->" + data.data2 + " ").toUtf8());
+    file.write((data.data1 + "-" + data.data2 + " ").toUtf8());
     file.flush();
-    sendMessage(data.op, data.data1, data.data2, "");
+
     if(SurakartaBoard::selected_num == 2){
+        sendMessage(data.op, data.data1, data.data2, "");
         Move(move);
-    }
+    }*/
 }
 
 void MainWindow::updatePlayerInfo()
@@ -153,7 +153,9 @@ void MainWindow::restartGame()
 void MainWindow::on_resigne_clicked()
 {
     SurakartaPlayer cp = game->game_info_->current_player_;
-    if(cp == game->p){
+    QString player = player2str(cp);
+    std::cout<<player.toStdString()<<" "<<game->player.toStdString()<<std::endl;
+    if(player == game->player){
         sendMessage(OPCODE::RESIGN_OP, "", "", "");
     }
 }
@@ -181,7 +183,6 @@ void MainWindow::sendMessage(OPCODE s, QString u, QString message1, QString mess
 void MainWindow::receiveMessage(NetworkData data) {
     ui->receive_edit->append(QString::number(static_cast<int>(data.op)) + " " + data.data1 + " " + data.data2 + " " + data.data3);
     if(data.op == OPCODE::READY_OP) {
-        game->SetPlayer(data.data2);
         game->StartGame();
         agent = new SurakartaAgent(game->GetBoard(), game->GetGameInfo(), game->GetRuleManager());
         ui->move->setEnabled(true);
@@ -193,7 +194,7 @@ void MainWindow::receiveMessage(NetworkData data) {
                 auto move = agent->CalculateMove();
                 NetworkData data = NetworkData(OPCODE::MOVE_OP, QString(char('A'+move.from.x)) + QString::number(move.from.y),
                                                QString(char('A'+move.to.x)) + QString::number(move.to.y), "");
-                file.write((data.data1 + "->" + data.data2 + " ").toUtf8());
+                file.write((data.data1 + "-" + data.data2 + " ").toUtf8());
                 file.flush();
                 sendMessage(data.op, data.data1, data.data2, "");
                 Move(move);
@@ -255,17 +256,46 @@ void MainWindow::on_prompt_clicked()
         for (unsigned int i = 0; i < game->board_size_; ++i) {
             for (unsigned int j = 0; j < game->board_size_; ++j) {
                 SurakartaIllegalMoveReason reason = game->rule_manager_->JudgeMove(SurakartaMove(SurakartaBoard::from,
-                                                    SurakartaPosition(i, j), game->game_info_->current_player_));
+                                                                                                 SurakartaPosition(i, j), game->game_info_->current_player_));
                 if(reason == SurakartaIllegalMoveReason::LEGAL_CAPTURE_MOVE || reason == SurakartaIllegalMoveReason::LEGAL_NON_CAPTURE_MOVE){
                     (*game->board_)[i][j]->SetColor(PieceColor::RED);
                     game->board_->scene->update();
                 }
-                else{
+                else if(SurakartaPosition(i, j) != SurakartaBoard::from){
                     (*game->board_)[i][j]->Recover_Color();
                     game->board_->scene->update();
                 }
             }
         }
+    }
+}
+
+
+void MainWindow::on_reappear_clicked()
+{
+    std::cout<<step<<"<"<<move.size()<<std::endl;
+    if(step < move.size() - 1 || step == 0){
+        if(step == 0){
+            record = file.readAll();
+            move = record.split(" ");
+        }
+        std::cout<<"step"<<step<<" ";
+        std::string t = move[step].toStdString();
+        SurakartaPlayer player;
+        SurakartaPosition from = SurakartaPosition((t[0] - 65), (t[1] - 48));
+        SurakartaPosition to = SurakartaPosition((t[3] - 65), (t[4] - 48));
+        std::cout<<t[0]<<t[1]<<" "<<t[3]<<t[4]<<std::endl;
+        if(step % 2)
+            player = SurakartaPlayer::WHITE;
+        else
+            player = SurakartaPlayer::BLACK;
+        SurakartaMove m = SurakartaMove(from, to, player);
+        Move(m);
+        step++;
+    }
+    else{
+        step = 0;
+        game->StartGame();
     }
 }
 

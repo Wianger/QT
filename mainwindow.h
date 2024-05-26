@@ -6,12 +6,11 @@
 #include <QTimer>
 #include <surakartaboard.h>
 #include <QMessageBox>
-#include "../NetworkLibrary/networksocket.h"
+#include "../src/networksocket.h"
 #include <QDialog>
 #include "surakartaagent.h"
 #include <QFile>
-#include <QTextStream>
-#include <QFileDialog>
+#include <QStringList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -50,6 +49,9 @@ private:
     SurakartaAgent *agent;
     bool is_ai = false;
     QFile file;
+    qsizetype step = 0;
+    QString record;
+    QStringList move;
 
 private slots:
     void on_move_clicked();
@@ -58,6 +60,7 @@ private slots:
     void on_send_msg_clicked();
     void on_ai_clicked();
     void on_prompt_clicked();
+    void on_reappear_clicked();
 };
 
 #endif // MAINWINDOW_H
